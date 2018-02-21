@@ -94,6 +94,7 @@
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.google.android.gms/play-services-basement/9.4.0/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.google.android.gms/play-services-tasks/9.4.0/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.google.android.gms/play-services-vision/9.4.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.waynejo/androidndkgif/0.3.3/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/incremental" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/incremental-safeguard" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/instant-run-support" />
@@ -113,6 +114,7 @@
     <orderEntry type="library" exported="" name="com.google.android.gms:play-services-vision-9.4.0" level="project" />
     <orderEntry type="library" exported="" name="com.android.support:recyclerview-v7-24.2.0" level="project" />
     <orderEntry type="library" exported="" name="com.google.android.gms:play-services-tasks-9.4.0" level="project" />
+    <orderEntry type="library" exported="" name="com.waynejo:androidndkgif-0.3.3" level="project" />
     <orderEntry type="library" exported="" name="com.android.support:support-media-compat-24.2.0" level="project" />
     <orderEntry type="library" exported="" name="com.google.android.gms:play-services-basement-9.4.0" level="project" />
     <orderEntry type="library" exported="" name="com.android.support:support-fragment-24.2.0" level="project" />

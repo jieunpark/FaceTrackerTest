@@ -25,12 +25,15 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -39,6 +42,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -50,9 +54,14 @@ import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.text.Line;
+import com.waynejo.androidndkgif.GifEncoder;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static android.os.Environment.getExternalStorageDirectory;
 
@@ -75,6 +84,8 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private Button btnTakePicture;
     private ImageView imgCapture;
     private LinearLayout layoutRoot;
+
+
 
     //==============================================================================================
     // Activity Methods
@@ -110,8 +121,26 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 //                takePicture();
                 mCameraSource.setPreviewCallback(mListener);
 
+                Handler delayHandler = new Handler();
+                delayHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        // TODO
+                        mCameraSource.setPreviewCallback(null);
+//                        closeGif();
+
+                        try {
+                            isEncoding = false;
+                            encodeGIF();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, 3000);
+
             }
         });
+
 
     }
 
@@ -243,7 +272,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         }
 
         mCameraSource = new CameraSource.Builder(context, detector)
-                .setRequestedPreviewSize(1024, 768)
+                .setRequestedPreviewSize(640, 480)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setRequestedFps(30.0f)
                 .build();
@@ -252,7 +281,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private CameraSource.OnPreviewListener mListener = new CameraSource.OnPreviewListener() {
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
-
+            Log.e(TAG,">>> onPreviewFrame data width ");
 
 //            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0 , data.length);
 //            imgCapture.setImageBitmap(bitmap);
@@ -269,7 +298,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Log.e(TAG,">>> onPreviewFrame data width [" + w + "] height [" + h + "]");
+
             Rect area = new Rect(0, 0, w, h);
 
             image.compressToJpeg(area, 50, out);
@@ -278,8 +307,66 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             imgCapture.setImageBitmap(captureImg);
 
 
+            if (isEncoding) {
+
+                bitmapList.add(captureImg);
+            }
+
+//            try {
+//                    encodeGIF(captureImg);
+//
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+
+
+
         }
     };
+
+    List<Bitmap> bitmapList = new ArrayList<>();
+
+
+    private boolean isEncoding  = true;
+    private int frameCount = 0;
+
+    private void encodeGIF() throws IOException {
+
+
+        int width = 640;
+        int height = 480;
+
+        String dstFile = "result.gif";
+        final String filePath = Environment.getExternalStorageDirectory() + File.separator + dstFile;
+
+        GifEncoder gifEncoder = new GifEncoder();
+
+        try {
+            Log.i(TAG,">>>>>>>>>>bitmap size : "+bitmapList.size());
+
+            gifEncoder.init(width, height, filePath, GifEncoder.EncodingType.ENCODING_TYPE_NORMAL_LOW_MEMORY);
+            gifEncoder.setDither(true);
+
+            for(Bitmap bitmap : bitmapList) {
+                Log.i(TAG,">>>>>>>>>>encoding");
+                gifEncoder.encodeFrame(bitmap, 0);
+            }
+
+            gifEncoder.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                Toast.makeText(FaceTrackerActivity.this, "done : " + filePath, Toast.LENGTH_SHORT).show();
+//            }
+//        });
+
+    }
 
     /**
      * Restarts the camera.
@@ -454,4 +541,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             mOverlay.remove(mFaceGraphic);
         }
     }
+
+
 }

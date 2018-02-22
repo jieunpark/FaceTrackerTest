@@ -20,14 +20,17 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.SurfaceTexture;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.google.android.gms.common.images.Size;
+import com.google.android.gms.samples.vision.face.facetracker.utils.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,67 +39,76 @@ public class CameraSourcePreview extends ViewGroup {
     private static final String TAG = "CameraSourcePreview";
 
     private Context mContext;
-    private SurfaceView mSurfaceView;
+//    private SurfaceView mSurfaceView;
+    private AutoFitTextureView mAutoFitTextureView;
+
     private boolean mStartRequested;
     private boolean mSurfaceAvailable;
-    private CameraSource mCameraSource;
+//    private CameraSource mCameraSource;
+    private Camera2Source mCamera2Source;
 
     private GraphicOverlay mOverlay;
+    private int screenRotation;
 
     public CameraSourcePreview(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext = context;
         mStartRequested = false;
         mSurfaceAvailable = false;
+        screenRotation = Utils.getScreenRotation(context);
 
-        mSurfaceView = new SurfaceView(context);
-        mSurfaceView.getHolder().addCallback(new SurfaceCallback());
+//        mSurfaceView = new SurfaceView(context);
+//        mSurfaceView.getHolder().addCallback(new SurfaceCallback());
+//
+//
+//        addView(mSurfaceView);
 
-
-        addView(mSurfaceView);
+        mAutoFitTextureView = new AutoFitTextureView(context);
+        mAutoFitTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+        addView(mAutoFitTextureView);
 
     }
 
-    public void start(CameraSource cameraSource) throws IOException {
-        if (cameraSource == null) {
+    public void start(Camera2Source camera2Source) throws IOException {
+        if (camera2Source == null) {
             stop();
         }
 
-        mCameraSource = cameraSource;
+        mCamera2Source = camera2Source;
 
-        if (mCameraSource != null) {
+        if (mCamera2Source != null) {
             mStartRequested = true;
             startIfReady();
         }
 
     }
 
-    public void start(CameraSource cameraSource, GraphicOverlay overlay) throws IOException {
+    public void start(Camera2Source camera2Source, GraphicOverlay overlay) throws IOException {
         mOverlay = overlay;
-        start(cameraSource);
+        start(camera2Source);
     }
 
     public void stop() {
-        if (mCameraSource != null) {
-            mCameraSource.stop();
+        if (mCamera2Source != null) {
+            mCamera2Source.stop();
         }
     }
 
     public void release() {
-        if (mCameraSource != null) {
-            mCameraSource.release();
-            mCameraSource = null;
+        if (mCamera2Source != null) {
+            mCamera2Source.release();
+            mCamera2Source = null;
         }
     }
 
-    public Bitmap takePicture() {
-        mSurfaceView.setDrawingCacheEnabled(true);
-        mSurfaceView.buildDrawingCache();
-        Bitmap drawingCache = mSurfaceView.getDrawingCache();
-        return drawingCache;
-
-//        return viewToBitmap(mSurfaceView, mSurfaceView.getWidth(), mSurfaceView.getHeight());
-    }
+//    public Bitmap takePicture() {
+//        mSurfaceView.setDrawingCacheEnabled(true);
+//        mSurfaceView.buildDrawingCache();
+//        Bitmap drawingCache = mSurfaceView.getDrawingCache();
+//        return drawingCache;
+//
+////        return viewToBitmap(mSurfaceView, mSurfaceView.getWidth(), mSurfaceView.getHeight());
+//    }
 
     public static Bitmap viewToBitmap(View view, int width, int height) {
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
@@ -107,17 +119,18 @@ public class CameraSourcePreview extends ViewGroup {
 
     private void startIfReady() throws IOException {
         if (mStartRequested && mSurfaceAvailable) {
-            mCameraSource.start(mSurfaceView.getHolder());
+//            mCamera2Source.start(mSurfaceView.getHolder());
+            mCamera2Source.start(mAutoFitTextureView, screenRotation);
             if (mOverlay != null) {
-                Size size = mCameraSource.getPreviewSize();
+                Size size = mCamera2Source.getPreviewSize();
                 int min = Math.min(size.getWidth(), size.getHeight());
                 int max = Math.max(size.getWidth(), size.getHeight());
                 if (isPortraitMode()) {
                     // Swap width and height sizes when in portrait, since it will be rotated by
                     // 90 degrees
-                    mOverlay.setCameraInfo(min, max, mCameraSource.getCameraFacing());
+                    mOverlay.setCameraInfo(min/4, max/4, mCamera2Source.getCameraFacing());
                 } else {
-                    mOverlay.setCameraInfo(max, min, mCameraSource.getCameraFacing());
+                    mOverlay.setCameraInfo(max/4, min/4, mCamera2Source.getCameraFacing());
                 }
                 mOverlay.clear();
             }
@@ -146,12 +159,30 @@ public class CameraSourcePreview extends ViewGroup {
         }
     }
 
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            mSurfaceAvailable = true;
+            mOverlay.bringToFront();
+            try {startIfReady();} catch (IOException e) {Log.e(TAG, "Could not start camera source.", e);}
+        }
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {}
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            mSurfaceAvailable = false;
+            return true;
+        }
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {}
+    };
+
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         int width = 320;
         int height = 240;
-        if (mCameraSource != null) {
-            Size size = mCameraSource.getPreviewSize();
+        if (mCamera2Source != null) {
+            Size size = mCamera2Source.getPreviewSize();
             if (size != null) {
                 width = size.getWidth();
                 height = size.getHeight();

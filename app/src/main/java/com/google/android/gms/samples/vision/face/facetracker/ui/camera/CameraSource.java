@@ -1085,6 +1085,7 @@ public class CameraSource {
             if (mListener != null) {
                 mListener.onPreviewFrame(data, camera);
             }
+
             mFrameProcessor.setNextFrame(data, camera);
         }
     }

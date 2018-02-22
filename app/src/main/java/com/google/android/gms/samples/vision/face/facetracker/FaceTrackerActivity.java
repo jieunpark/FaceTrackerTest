@@ -31,9 +31,17 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.hardware.camera2.CameraCharacteristics;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
+import android.renderscript.Type;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -46,6 +54,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.samples.vision.face.facetracker.ui.camera.Camera2Source;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSource;
 import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
@@ -72,7 +81,9 @@ import static android.os.Environment.getExternalStorageDirectory;
 public final class FaceTrackerActivity extends AppCompatActivity {
     private static final String TAG = "FaceTracker";
 
-    private CameraSource mCameraSource = null;
+//    private CameraSource mCameraSource = null;
+
+    private Camera2Source mCamera2Source = null;
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
@@ -119,24 +130,35 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 //                takePicture();
-                mCameraSource.setPreviewCallback(mListener);
+
+                mCamera2Source.setPreviewCallback(mListener2);
 
                 Handler delayHandler = new Handler();
                 delayHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        // TODO
-                        mCameraSource.setPreviewCallback(null);
-//                        closeGif();
-
-                        try {
-                            isEncoding = false;
-                            encodeGIF();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        mCamera2Source.setPreviewCallback(null);
                     }
                 }, 3000);
+
+//                mCameraSource.setPreviewCallback(mListener);
+//
+//                Handler delayHandler = new Handler();
+//                delayHandler.postDelayed(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        // TODO
+//                        mCameraSource.setPreviewCallback(null);
+////                        closeGif();
+//
+//                        try {
+//                            isEncoding = false;
+//                            encodeGIF();
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }, 3000);
 
             }
         });
@@ -163,52 +185,52 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         imgCapture.setImageBitmap(viewToBitmap(mPreview, mPreview.getWidth(), mPreview.getHeight()));
     }
 
-    /**
-     * surfaceview캡
-     */
-    private void takePicture2() {
-        imgCapture.setImageBitmap(mPreview.takePicture());
-    }
+//    /**
+//     * surfaceview캡
+//     */
+//    private void takePicture2() {
+//        imgCapture.setImageBitmap(mPreview.takePicture());
+//    }
 
     /**
      * Camera Resource 캡쳐
      */
-    private void takePicture3() {
+//    private void takePicture3() {
+//
+//        mCameraSource.takePicture(null, new CameraSource.PictureCallback() {
+//            @Override
+//            public void onPictureTaken(byte[] bytes) {
+//                Bitmap pictureBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+//
+//                Bitmap temp=Bitmap.createBitmap(pictureBitmap.getWidth(),pictureBitmap.getHeight(),pictureBitmap.getConfig());
+//                Canvas canvas = new Canvas(temp);
+//                canvas.drawBitmap(pictureBitmap,0,0,null);
+//
+//                mPreview.buildDrawingCache();
+//                Bitmap overlayBitmap = mPreview.getDrawingCache();
+//                canvas.drawBitmap(overlayBitmap,0,0,null);
+//
+//
+//
+//                imgCapture.setImageBitmap(temp);
+//            }
+//        });
+//    }
 
-        mCameraSource.takePicture(null, new CameraSource.PictureCallback() {
-            @Override
-            public void onPictureTaken(byte[] bytes) {
-                Bitmap pictureBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-
-                Bitmap temp=Bitmap.createBitmap(pictureBitmap.getWidth(),pictureBitmap.getHeight(),pictureBitmap.getConfig());
-                Canvas canvas = new Canvas(temp);
-                canvas.drawBitmap(pictureBitmap,0,0,null);
-
-                mPreview.buildDrawingCache();
-                Bitmap overlayBitmap = mPreview.getDrawingCache();
-                canvas.drawBitmap(overlayBitmap,0,0,null);
-
-
-
-                imgCapture.setImageBitmap(temp);
-            }
-        });
-    }
-
-    /**
-     * SurfaceView캡쳐
-     */
-    private void takePicture4() {
-        imgCapture.setImageBitmap(mPreview.takePicture());
-    }
-
-    private void takePicture5() {
-//        layoutRoot.buildDrawingCache();
-//        Bitmap bitmap = layoutRoot.getDrawingCache();
-//        imgCapture.setImageBitmap(bitmap);
-
-        imgCapture.setImageBitmap(viewToBitmap(layoutRoot, layoutRoot.getWidth(), layoutRoot.getHeight()));
-    }
+//    /**
+//     * SurfaceView캡쳐
+//     */
+//    private void takePicture4() {
+//        imgCapture.setImageBitmap(mPreview.takePicture());
+//    }
+//
+//    private void takePicture5() {
+////        layoutRoot.buildDrawingCache();
+////        Bitmap bitmap = layoutRoot.getDrawingCache();
+////        imgCapture.setImageBitmap(bitmap);
+//
+//        imgCapture.setImageBitmap(viewToBitmap(layoutRoot, layoutRoot.getWidth(), layoutRoot.getHeight()));
+//    }
 
     /**
      * Handles the requesting of the camera permission.  This includes
@@ -271,17 +293,129 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             Log.w(TAG, "Face detector dependencies are not yet available.");
         }
 
-        mCameraSource = new CameraSource.Builder(context, detector)
-                .setRequestedPreviewSize(640, 480)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
-                .setRequestedFps(30.0f)
+//        mCameraSource = new CameraSource.Builder(context, detector)
+//                .setRequestedPreviewSize(640, 480)
+//                .setFacing(CameraSource.CAMERA_FACING_BACK)
+//                .setRequestedFps(30.0f)
+//                .build();
+
+        mCamera2Source = new Camera2Source.Builder(context, detector)
+                .setFocusMode(Camera2Source.CAMERA_AF_AUTO)
+                .setFlashMode(Camera2Source.CAMERA_FLASH_AUTO)
+                .setFacing(Camera2Source.CAMERA_FACING_BACK)
                 .build();
+
+    }
+
+    private Camera2Source.OnPreviewListener mListener2 = new Camera2Source.OnPreviewListener() {
+        @Override
+        public void onPreviewFrame(ImageReader reader) {
+            Log.e(TAG, ">>> onPreviewFrame ");
+
+            Image image = reader.acquireLatestImage();
+            if(image==null)
+                return;
+            final byte[] bytes = getYUVbytes(image);
+            int width = image.getWidth();
+            int height = image.getHeight();
+            image.close();
+
+            final Bitmap bitmap = decodeYUVbytes(FaceTrackerActivity.this, bytes, width, height, Camera2Source.CAMERA_FACING_BACK);
+
+            runOnUiThread(new Runnable(){
+                @Override
+                public void run() {
+                    imgCapture.setImageBitmap(bitmap);
+                }
+            });
+        }
+    };
+
+    public static Bitmap decodeYUVbytes(Context context, byte[] data, int width, int height, int lensfacing) {
+
+        if (data == null) return null;
+
+        int W = width;
+        int H = height;
+
+
+        RenderScript rs = RenderScript.create(context);
+        ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+
+        Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(data.length);
+        Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+
+        Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(W).setY(H);
+        Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+
+
+        Bitmap bmpout = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+
+        in.copyFromUnchecked(data);
+
+        yuvToRgbIntrinsic.setInput(in);
+        yuvToRgbIntrinsic.forEach(out);
+        out.copyTo(bmpout);
+
+//        Matrix matrix = new Matrix();
+//        int angle = 90;
+
+        Matrix matrix = getYUVMatrix(width, lensfacing);
+//        if(lensfacing==CameraCharacteristics.LENS_FACING_BACK)
+//            angle = 90;
+//        else
+//            angle = 270;
+//        matrix.preRotate(angle, W/2, H/2);
+        bmpout = Bitmap.createBitmap(bmpout, 0, 0, W, H, matrix, false);
+        return bmpout ;
+    }
+
+    public static Matrix getYUVMatrix(int width, int lensFacing) {
+        String deviceManufacture = android.os.Build.MANUFACTURER;
+        Matrix matrix = null;
+        if (lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+            if(matrix==null)
+                matrix = new Matrix();
+            matrix.preScale(-1, 1);
+            matrix.preTranslate(width, 0);
+            matrix.preRotate(270);      // 전면카메라일때 회전각도
+        }
+        else {
+//        if(deviceManufacture.equals(MANUFACTURER_SAMSUNG)) {
+            if(matrix==null)
+                matrix = new Matrix();
+            matrix.preRotate(90);       // 후면카메라일때 회전각도
+        }
+        return matrix;
+    }
+
+    public static byte[] getYUVbytes(Image image) {
+        try {
+            Image.Plane Y = image.getPlanes()[0];
+            Image.Plane U = image.getPlanes()[1];
+            Image.Plane V = image.getPlanes()[2];
+
+            int Yb = Y.getBuffer().remaining();
+            int Ub = U.getBuffer().remaining();
+            int Vb = V.getBuffer().remaining();
+
+            byte[] data = new byte[Yb + Ub + Vb];
+
+            Y.getBuffer().get(data, 0, Yb);
+            V.getBuffer().get(data, Yb, Vb);
+            U.getBuffer().get(data, Yb + Vb, Ub);
+            return data;
+        } catch (Exception e) {
+            System.out.println("## Error while get yuv bytes: ");
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private CameraSource.OnPreviewListener mListener = new CameraSource.OnPreviewListener() {
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
-            Log.e(TAG,">>> onPreviewFrame data width ");
+//            Log.e(TAG,">>> onPreviewFrame data width ");
 
 //            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0 , data.length);
 //            imgCapture.setImageBitmap(bitmap);
@@ -294,8 +428,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             int format = params.getPreviewFormat();
 
             YuvImage image = new YuvImage(data, format, w, h, null);
-
-
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -331,7 +463,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private int frameCount = 0;
 
     private void encodeGIF() throws IOException {
-
 
         int width = 640;
         int height = 480;
@@ -393,8 +524,11 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mCameraSource != null) {
-            mCameraSource.release();
+//        if (mCameraSource != null) {
+//            mCameraSource.release();
+//        }
+        if (mCamera2Source != null) {
+            mCamera2Source.release();
         }
     }
 
@@ -465,13 +599,13 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             dlg.show();
         }
 
-        if (mCameraSource != null) {
+        if (mCamera2Source != null) {
             try {
-                mPreview.start(mCameraSource, mGraphicOverlay);
+                mPreview.start(mCamera2Source, mGraphicOverlay);
             } catch (IOException e) {
                 Log.e(TAG, "Unable to start camera source.", e);
-                mCameraSource.release();
-                mCameraSource = null;
+                mCamera2Source.release();
+                mCamera2Source = null;
             }
         }
     }
